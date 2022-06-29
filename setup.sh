@@ -1,4 +1,7 @@
 #!/bin/bash
+cd ~/StockSentimentAnalysis/
+git clone https://github.com/ProsusAI/finBERT
+cd ..
 conda env create -f environment.yml
 conda activate sent_env
 mkdir -p ./finBERT/models/sentiment/pretrained/finbert-sentiment/
