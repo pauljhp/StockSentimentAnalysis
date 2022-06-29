@@ -1,0 +1,3 @@
+[submodule "finBert"]
+	path = finBert
+	url = https://github.com/ProsusAI/finBERT
