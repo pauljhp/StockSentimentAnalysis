@@ -15,6 +15,7 @@ Then run the setup script:
 
 ```$ sudo bash setup.sh ```
 
+Using the package:
 
 ```from StockSentimentAnalysis import news_sentiment
 import datetime as dt
