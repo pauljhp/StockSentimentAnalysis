@@ -2,7 +2,7 @@ from FinancialModelingPrep.tickers import Ticker
 from FinancialModelingPrep.indices import Index
 import transformers
 from transformers import (AutoModel, BertTokenizer,
-    BertForSequenceClassification,)
+    BertForSequenceClassification)
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
@@ -22,11 +22,16 @@ tokenizer = AutoTokenizer.from_pretrained("ProsusAI/finbert")
 model = AutoModelForSequenceClassification.from_pretrained("ProsusAI/finbert")
 TODAY = dt.date.today()
 
+def trim(tensor: torch.tensor, max_len: int=512, ):
+    """trim the tensor to max len"""
+    if tensor.shape[-1] > max_len:
+        tensor = tensor[..., :max_len]
+    return tensor
+
 def get_prediction(text: str, 
     model: AutoModelForSequenceClassification=model, 
     tokenizer=tokenizer) -> np.array:
-    """
-    Get one prediction.
+    """generate sentiment prediction with probability
 
     Parameters
     ----------
@@ -42,8 +47,10 @@ def get_prediction(text: str,
     predition: np.array
         An array that includes probabilities for each class.
     """
+    max_len = 512
 
     tokens = tokenizer.tokenize(text)
+
     tokens = ["[CLS]"] + tokens + ["[SEP]"]
     token_type_ids = [0] * len(tokens)
     attention_mask = [1] * len(tokens)
@@ -64,6 +71,8 @@ def get_prediction(text: str,
     all_attention_mask = torch.tensor([f.attention_mask for f in features], dtype=torch.long)
     all_token_type_ids = torch.tensor([f.token_type_ids for f in features], dtype=torch.long)
 
+    all_input_ids, all_attention_mask, all_token_type_ids = trim(all_input_ids), trim(all_attention_mask), trim(all_token_type_ids)
+
     model.eval()
     logits = model(input_ids=all_input_ids, attention_mask=all_attention_mask, 
         token_type_ids=all_token_type_ids).get('logits')
@@ -72,7 +81,8 @@ def get_prediction(text: str,
     return prediction
 
 def get_daily_sentiment_series(ticker: str, 
-    start_date: Union[dt.date, str]=dt.date(2017, 1, 1)):
+    start_date: Union[dt.date, str]=dt.date(2017, 1, 1),
+    lim: Optional[int]=None):
     """get historical news for a ticker and run inference"""
     if isinstance(start_date, dt.date):
         start_date = start_date.strftime("%Y-%m-%d")
@@ -82,14 +92,18 @@ def get_daily_sentiment_series(ticker: str,
         raise TypeError("start_date must be a datetime.date or a string")
     
     with ThreadPoolExecutor(max_workers=10) as executor:
-        futures = [executor.submit(Ticker.get_stock_news, ticker, start_date=start_date),
+        futures = [executor.submit(Ticker.get_stock_news, ticker, start_date=start_date, limit=lim),
             executor.submit(Ticker.get_historical_price, ticker, start_date=start_date, end_date=TODAY)]
         news, prices = (future.result() for future in as_completed(futures))
 
     if news.shape[-1] > prices.shape[-1]:
         news, prices = prices, news
+    prices = prices.reset_index()
+    prices.loc[:, 'date'] = pd.to_datetime(prices.date, format="%Y-%m-%d")
+    prices.loc[:, 'date'] = prices.date.dt.to_period("D")
+    prices.set_index("date", inplace=True)
     prices.columns = pd.MultiIndex.from_tuples([("price", i) for i in prices.columns])
-    news = Ticker.get_stock_news(ticker, start_date="2022-01-01")
+    
     news.loc[:, "day"] = news.index.get_level_values(
         "publishedDate").to_series().dt.to_period("D").values
     title_sent = news.set_index(["day"]).title.apply(
@@ -114,7 +128,7 @@ def get_daily_sentiment_series(ticker: str,
     summary.loc[:, ('content_sentiment', 'neutral')] = \
         content_sent.set_index("day").text.apply(lambda x: x[0][2]).groupby("day").mean()
 
-    summary.loc[:, ("news_count", "count")] = news.groupby("day").count().negative.values
-    summary.merge(prices, left_index=True, right_index=True, 
-        left_on="day", right_on="date")
+    summary.loc[:, ("news_count", "count")] = news.groupby("day").count().iloc[:, 0].values
+    summary = summary.merge(prices, left_index=True, right_index=True, how='outer')
+    summary = summary.drop([("price", "label")], axis=1).astype(float)
     return summary
