@@ -1,12 +1,12 @@
-from FinancialModelingPrep.tickers import Ticker
-from FinancialModelingPrep.indices import Index
+from .FinancialModelingPrep.tickers import Ticker
+from .FinancialModelingPrep.indices import Index
 import transformers
 from transformers import (AutoModel, BertTokenizer,
     BertForSequenceClassification)
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-from finBERT.finbert import utils
+from .finBERT.finbert import utils
 import pandas as pd
 import torch.nn.functional as F
 import numpy as np
