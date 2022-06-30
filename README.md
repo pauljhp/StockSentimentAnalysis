@@ -17,7 +17,7 @@ Then run the setup script:
 
 Using the package:
 
-```from StockSentimentAnalysis import news_sentiment
-import datetime as dt
-summary = news_sentiment.get_daily_sentiment_series("FB", 
+```>>> from StockSentimentAnalysis import news_sentiment
+>>> import datetime as dt
+>>> summary = news_sentiment.get_daily_sentiment_series("FB", 
     start_date=dt.date(2022, 1, 1), lim=1000)```
