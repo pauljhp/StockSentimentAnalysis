@@ -1,6 +1,5 @@
 #!/bin/bash
 git clone https://github.com/ProsusAI/finBERT
-cd ..
 git clone https://github.com/pauljhp/FinancialModelingPrep
 cd ..
 conda env create -f ./StockSentimentAnalysis/environment.yml
