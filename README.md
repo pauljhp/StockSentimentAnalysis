@@ -1,5 +1,6 @@
 # StockSentimentAnalysis
-SentimentAnalysis model for stock news
+SentimentAnalysis model for stock news.
+
 The bulk of this is based on Prosus' FinBERT pretrained model, training on the financial phrasebank dataset.
 
 ## Using this package
